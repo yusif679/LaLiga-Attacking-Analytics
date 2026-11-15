@@ -118,3 +118,72 @@ fig.update_layout(
 
 # 9. Display the chart inside Streamlit
 st.plotly_chart(fig, use_container_width=True)
+
+
+# 10. Goals vs Expected Goals scatter plot
+st.subheader("Goals vs Expected Goals (xG)")
+
+scatter_fig = px.scatter(
+    forwards,
+    x="xG",
+    y="goals",
+    color="team_title",
+    size="shots",
+    hover_name="player_name",
+    hover_data={
+        "team_title": True,
+        "goals": True,
+        "xG": ":.2f",
+        "shots": True,
+        "assists": True,
+        "time": True,
+        "goals_per_90": ":.2f"},
+    labels={
+        "xG": "Expected Goals (xG)",
+        "goals": "Actual Goals",
+        "team_title": "Team",
+        "shots": "Shots"
+    },
+    title="Attacking Finishing Performance"
+)
+
+# Draw a reference line where actual goals equal xG
+max_value = max(
+    forwards["xG"].max(),
+    forwards["goals"].max(),
+    1
+)
+
+scatter_fig.add_shape(
+    type="line",
+    x0=0,
+    y0=0,
+    x1=max_value,
+    y1=max_value,
+    line=dict(color="gray", dash="dash")
+)
+
+scatter_fig.update_layout(
+    height=600,
+    xaxis_range=[0, max_value + 2],
+    yaxis_range=[0, max_value + 2]
+)
+
+st.plotly_chart(scatter_fig, use_container_width=True)
+
+
+st.info(
+    "Analytical insight: This chart helps identify players "
+    "who scored more or fewer goals than expected based on "
+    "the quality of their shooting opportunities. "
+    "Performance above xG may indicate strong finishing, "
+    "although it can also reflect short-term variation."
+)
+
+
+st.caption(
+    "Each bubble represents a player. "
+    "Bubble size indicates the number of shots. "
+    "Players above the dashed line scored more goals than expected, "
+    "while players below it scored fewer."
+)
