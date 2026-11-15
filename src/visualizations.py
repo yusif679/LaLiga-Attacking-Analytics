@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # 1. Load player data
-players = pd.read_csv("data/players.csv")
+players = pd.read_csv("../data/players.csv")
 
 # 2. Select forwards
 forwards = players[

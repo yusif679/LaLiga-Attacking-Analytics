@@ -6,8 +6,8 @@ pd.set_option("display.max_columns", None)
 pd.set_option("display.width", 200)
 
 # 2. Load our datasets
-players = pd.read_csv("data/players.csv")
-shots = pd.read_csv("data/shots.csv")
+players = pd.read_csv("../data/players.csv")
+shots = pd.read_csv("../data/shots.csv")
 
 # 3. Preview the datasets
 print("\nPLAYERS DATASET")
