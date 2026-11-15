@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 import plotly.express as px
+import plotly.graph_objects as go
 
 # 1. Find our project folder
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -187,3 +188,216 @@ st.caption(
     "Players above the dashed line scored more goals than expected, "
     "while players below it scored fewer."
 )
+
+
+# 11. Interactive Player Shot Map
+st.subheader("Interactive Player Shot Map")
+
+st.caption(
+    "Explore where players attempted their shots during "
+    "the 2015–16 La Liga season."
+)
+
+# Get all unique player names from the shots dataset
+shot_players = sorted(shots["player"].dropna().unique())
+
+# Create an interactive player selector
+selected_player = st.selectbox(
+    "Select a player",
+    options=shot_players,
+    index=shot_players.index("Lionel Messi")
+    if "Lionel Messi" in shot_players else 0
+)
+
+# Filter the shots dataset for the selected player
+player_shots = shots[
+    shots["player"] == selected_player
+].copy()
+
+
+# Display shooting statistics for the selected player
+shot_col1, shot_col2, shot_col3 = st.columns(3)
+
+with shot_col1:
+    st.metric(
+        "Total Shots",
+        len(player_shots)
+    )
+
+with shot_col2:
+    st.metric(
+        "Goals Scored",
+        (player_shots["result"] == "Goal").sum()
+    )
+
+with shot_col3:
+    st.metric(
+        "Expected Goals (xG)",
+        round(player_shots["xG"].sum(), 2)
+    )
+
+
+
+
+# 12. Interactive football shot map
+
+import math
+import plotly.graph_objects as go
+
+# Convert Understat coordinates into pitch metres
+# Flip the X coordinates so the attacking goal is on the left
+player_shots["pitch_x"] = (1 - player_shots["X"]) * 105
+player_shots["pitch_y"] = player_shots["Y"] * 68
+
+# Separate goals and other shots
+goals = player_shots[player_shots["result"] == "Goal"]
+other_shots = player_shots[player_shots["result"] != "Goal"]
+
+# Create the figure
+shot_fig = go.Figure()
+
+# Pitch boundaries
+shot_fig.add_shape(
+    type="rect",
+    x0=0, y0=0, x1=52.5, y1=68,
+    line=dict(color="white", width=2),
+    fillcolor="#176b3a",
+    layer="below"
+)
+
+# Penalty area
+shot_fig.add_shape(
+    type="rect",
+    x0=0, y0=13.84,
+    x1=16.5, y1=54.16,
+    line=dict(color="white", width=2)
+)
+
+# Six-yard box
+shot_fig.add_shape(
+    type="rect",
+    x0=0, y0=24.84,
+    x1=5.5, y1=43.16,
+    line=dict(color="white", width=2)
+)
+
+# Goal
+shot_fig.add_shape(
+    type="rect",
+    x0=-2, y0=30.34,
+    x1=0, y1=37.66,
+    line=dict(color="white", width=2)
+)
+
+# Penalty spot
+shot_fig.add_trace(
+    go.Scatter(
+        x=[11],
+        y=[34],
+        mode="markers",
+        marker=dict(color="white", size=5),
+        showlegend=False,
+        hoverinfo="skip"
+    )
+)
+
+# Penalty arc
+arc_x = []
+arc_y = []
+
+for i in range(101):
+    angle = (
+        -math.acos(5.5 / 9.15)
+        + i * (2 * math.acos(5.5 / 9.15) / 100)
+    )
+
+    arc_x.append(11 + 9.15 * math.cos(angle))
+    arc_y.append(34 + 9.15 * math.sin(angle))
+
+shot_fig.add_trace(
+    go.Scatter(
+        x=arc_x,
+        y=arc_y,
+        mode="lines",
+        line=dict(color="white", width=2),
+        showlegend=False,
+        hoverinfo="skip"
+    )
+)
+
+# Non-goal shots
+shot_fig.add_trace(
+    go.Scatter(
+        x=other_shots["pitch_x"],
+        y=other_shots["pitch_y"],
+        mode="markers",
+        name="Other Shots",
+        marker=dict(
+            size=other_shots["xG"] * 18 + 7,
+            color="#ffa726",
+            opacity=0.6
+        ),
+        customdata=other_shots[["result", "xG", "minute"]],
+        hovertemplate=(
+            "Result: %{customdata[0]}"
+            "<br>xG: %{customdata[1]:.2f}"
+            "<br>Minute: %{customdata[2]}"
+            "<extra></extra>"
+        )
+    )
+)
+
+# Goals
+shot_fig.add_trace(
+    go.Scatter(
+        x=goals["pitch_x"],
+        y=goals["pitch_y"],
+        mode="markers",
+        name="Goals",
+        marker=dict(
+            size=goals["xG"] * 18 + 7,
+            color="#44ff66",
+            opacity=0.9,
+            line=dict(color="white", width=1)
+        ),
+        customdata=goals[["xG", "minute"]],
+        hovertemplate=(
+            "GOAL!"
+            "<br>xG: %{customdata[0]:.2f}"
+            "<br>Minute: %{customdata[1]}"
+            "<extra></extra>"
+        )
+    )
+)
+
+# Configure chart appearance
+shot_fig.update_layout(
+    height=750,
+    plot_bgcolor="#176b3a",
+    paper_bgcolor="rgba(0,0,0,0)",
+
+    xaxis=dict(
+        range=[-3, 55],
+        visible=False,
+        fixedrange=False
+    ),
+    yaxis=dict(
+        range=[-2, 70],
+        visible=False,
+        fixedrange=False
+    ),
+    dragmode="zoom",
+    margin=dict(l=10, r=10, t=10, b=45),
+    legend=dict(
+        orientation="h",
+        x=0.5,
+        xanchor="center",
+        y=-0.05
+    )
+)
+
+# Display the shot map in a centered column
+left_space, pitch_column, right_space = st.columns([1, 3, 1])
+
+with pitch_column:
+    st.plotly_chart(shot_fig, width="stretch")
