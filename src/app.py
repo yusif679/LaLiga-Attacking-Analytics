@@ -401,3 +401,115 @@ left_space, pitch_column, right_space = st.columns([1, 3, 1])
 
 with pitch_column:
     st.plotly_chart(shot_fig, width="stretch")
+
+
+
+# 14. Attacking statistics correlation heatmap
+
+st.subheader("How Are Attacking Statistics Connected?")
+
+st.write(
+    "This chart explores whether players who perform well "
+    "in one attacking statistic also tend to perform well "
+    "in another."
+)
+
+# Use clear names for the statistics
+stat_names = {
+    "goals": "Goals",
+    "xG": "Expected Goals",
+    "assists": "Assists",
+    "xA": "Expected Assists",
+    "shots": "Shots",
+    "key_passes": "Key Passes"
+}
+
+# Include players with at least 900 minutes played
+correlation_players = players[
+    players["time"] >= 900
+].copy()
+
+# Calculate correlations between attacking statistics
+correlation_matrix = correlation_players[
+    list(stat_names.keys())
+].corr()
+
+# Rename the rows and columns
+correlation_matrix = correlation_matrix.rename(
+    index=stat_names,
+    columns=stat_names
+)
+
+# Create the heatmap
+heatmap_fig = px.imshow(
+    correlation_matrix,
+    text_auto=".2f",
+    color_continuous_scale="RdBu_r",
+    zmin=-1,
+    zmax=1,
+    aspect="auto",
+    labels={"color": "Correlation Strength"},
+    title="Relationships Between Player Attacking Statistics"
+)
+
+heatmap_fig.update_layout(
+    height=650,
+    margin=dict(l=30, r=30, t=70, b=30),
+    xaxis_title=None,
+    yaxis_title=None,
+    coloraxis_colorbar=dict(
+        title="Correlation"
+    )
+)
+
+st.plotly_chart(heatmap_fig, width="stretch")
+
+# Explain how to interpret the heatmap
+st.markdown(
+    """
+    **How to read this chart**
+
+    - **+1.00:** Very strong positive relationship.
+    - **0.00:** No linear relationship.
+    - **-1.00:** Very strong negative relationship.
+
+    Each square compares two attacking statistics.
+    The diagonal is always 1.00 because each statistic
+    is perfectly correlated with itself.
+    """
+)
+
+# Identify the strongest relationship between different statistics
+correlation_pairs = []
+
+stat_columns = list(correlation_matrix.columns)
+
+for i in range(len(stat_columns)):
+    for j in range(i + 1, len(stat_columns)):
+        stat1 = stat_columns[i]
+        stat2 = stat_columns[j]
+
+        correlation_value = correlation_matrix.loc[
+            stat1, stat2
+        ]
+
+        correlation_pairs.append(
+            (stat1, stat2, correlation_value)
+        )
+
+strongest_pair = max(
+    correlation_pairs,
+    key=lambda pair: abs(pair[2])
+)
+
+st.success(
+    f"Strongest relationship: {strongest_pair[0]} "
+    f"and {strongest_pair[1]} "
+    f"(correlation: {strongest_pair[2]:.2f})."
+)
+
+st.caption(
+    "Analysis includes players with at least 900 minutes played. "
+    "These correlations use season totals, so playing time may "
+    "influence the relationships. Correlation does not imply causation."
+)
