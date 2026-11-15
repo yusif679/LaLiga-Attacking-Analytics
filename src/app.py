@@ -47,8 +47,41 @@ forwards = players[
     players["position"].str.contains("F")
 ].copy()
 
-# Keep forwards with at least 900 minutes
-forwards = forwards[forwards["time"] >= 900].copy()
+# Create a list of available teams
+teams = sorted(forwards["team_title"].unique())
+
+# Add "All Teams" as the first option
+team_options = ["All Teams"] + teams
+
+# Create the team selection dropdown
+selected_team = st.selectbox(
+    "Select a team",
+    options=team_options
+)
+
+# Filter players if a specific team is selected
+if selected_team != "All Teams":
+    forwards = forwards[
+        forwards["team_title"] == selected_team
+    ].copy()
+
+
+
+# Allow users to choose the minimum playing time
+min_minutes = st.slider(
+    "Minimum minutes played",
+    min_value=0,
+    max_value=3000,
+    value=900,
+    step=100
+)
+
+# Filter forwards based on the selected value
+forwards = forwards[
+    (forwards["time"] >= min_minutes) &
+    (forwards["time"] > 0)
+].copy()
+
 
 # Calculate goals per 90 minutes
 forwards["goals_per_90"] = (
